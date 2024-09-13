@@ -1,0 +1,23 @@
+---
+interface Props {
+  mapTitle: string;
+  mapAuthor: string;
+}
+
+const {mapTitle, mapAuthor} = Astro.props
+
+import Image from "astro/components/Image.astro";
+import ideLogo from "/src/assets/ide_logo.svg";
+---
+
+<header class="flex px-4 py-2 items-center justify-between bg-pattern bg-mainColor">
+  <div>
+    <h1 class="font-bold text-2xl text-neutral-100">{mapTitle}</h1>
+    <h4 class="text-neutral-400">
+      {mapAuthor}
+    </h4>
+  </div>
+  <a href="https://mapa.tandil.gov.ar/" class="hidden md:block">
+    <Image src={ideLogo} alt="Logo de IDE Tandil" class="h-16 w-fit" />
+  </a>
+</header>

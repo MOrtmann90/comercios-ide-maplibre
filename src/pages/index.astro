@@ -1,0 +1,52 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Map from "../components/Map.astro";
+import Drawer from "../components/Drawer.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Layout title="Comercios de Tandil">
+  <Header mapTitle="Comercios de Tandil" mapAuthor="Área de Geotecnologías"/>
+  <main class="relative">
+    <Map />
+    <Drawer />
+  </main>
+  <Footer />
+</Layout>
+
+<!-- scrollbar style -->
+<style is:global>
+  *::-webkit-scrollbar {
+    height: 7px;
+    width: 7px;
+  }
+  *::-webkit-scrollbar-track {
+    border-radius: 5px;
+    background-color: #e5e7eb;
+    border: 2px solid #ffffff;
+  }
+
+  *::-webkit-scrollbar-track:hover {
+    background-color: #d1d5db;
+  }
+
+  *::-webkit-scrollbar-track:active {
+    background-color: #b8c0c2;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    background-color: #374151;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #6b7280;
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background-color: #4b5563;
+  }
+</style>

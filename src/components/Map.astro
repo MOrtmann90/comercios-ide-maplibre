@@ -1,0 +1,266 @@
+---
+import "maplibre-gl/dist/maplibre-gl.css";
+import "@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css";
+---
+
+<div id="map" class="w-full h-full"></div>
+<div
+  id="layer-control"
+  class="flex bg-gray-50 group shadow-md rounded-md absolute md:top-2 left-2 divide-x divide-gray-300 bottom-2 md:bottom-auto"
+>
+  <label
+    class="cursor-pointer hover:bg-gray-100 has-[:checked]:bg-gray-400 px-2 py-1 rounded-l-md has-[:checked]:text-white transition"
+  >
+    <input type="radio" name="basemap" value="osm" checked class="hidden" />
+    OpenStreetMap
+  </label>
+  <label
+    class="cursor-pointer hover:bg-gray-100 has-[:checked]:bg-gray-400 px-2 py-1 rounded-r-md has-[:checked]:text-white transition"
+  >
+    <input type="radio" name="basemap" value="argenmap" class="hidden" />
+    Argenmap
+  </label>
+</div>
+
+<!-- map style -->
+<style is:global>
+  .popup-class .maplibregl-popup-content {
+    background-color: #1f2937; /* bg-gray-800/90*/
+    opacity: 80%;
+    filter: drop-shadow(2px 3px 5px #5c5c5c);
+  }
+
+  .popup-class .maplibregl-popup-tip {
+    border-top-color: #1f2937;
+    filter: drop-shadow(1px 6px 5px #5c5c5c);
+    opacity: 80%;
+  }
+
+  .popup-class h2 {
+    margin-top: 0;
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+  }
+
+  .popup-class p {
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+    color: #e2e8f0;
+  }
+
+  .popup-class .maplibregl-popup-close-button {
+    padding: 2px;
+    font-size: 1rem;
+    margin-left: 5px;
+    color: #1e293b;
+  }
+
+  .popup-class .maplibregl-popup-close-button:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+  }
+</style>
+
+<script>
+  const drawerBtn = document.getElementById("drawer-btn");
+  const drawer = document.getElementById("drawer");
+  const drawerCloseBtn = document.getElementById("drawer-close-btn");
+
+  drawerBtn.addEventListener("click", () => {
+    drawer.classList.remove("-translate-x-full");
+  });
+
+  drawerCloseBtn.addEventListener("click", () => {
+    drawer.classList.add("-translate-x-full");
+  });
+
+  const searchPlaceholder = document.querySelector('[aria-label="Search"]');
+  searchPlaceholder.setAttribute("placeholder", "Buscar dirección");
+</script>
+
+<script>
+  import maplibregl from "maplibre-gl";
+  import * as turf from "@turf/turf";
+  import MaplibreGeocoder from "@maplibre/maplibre-gl-geocoder";
+
+  const coords = [-59.1369339, -37.328735] as [number, number];
+  const bounds = [
+    [-59.65, -37.45],
+    [-58.92, -37.19],
+  ] as [[number, number], [number, number]];
+
+  const map = new maplibregl.Map({
+    container: "map",
+    style: {
+      version: 8,
+      sources: {},
+      layers: [],
+    },
+    center: coords,
+    zoom: 13,
+    bearing: 0,
+    pitch: 55,
+    antialias: true,
+    maxBounds: bounds,
+    attributionControl: false
+  });
+
+  map.on("load", () => {
+    map.addSource("osm", {
+      type: "raster",
+      tiles: ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+    });
+
+    map.addLayer({
+      id: "osm",
+      type: "raster",
+      source: "osm",
+      layout: { visibility: "visible" },
+    });
+
+    map.addSource("argenmap", {
+      type: "raster",
+      scheme: "tms",
+      tiles: [
+        "https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_gris@EPSG%3A3857@png/{z}/{x}/{y}.png",
+      ],
+      tileSize: 256,
+    });
+
+    map.addLayer({
+      id: "argenmap",
+      type: "raster",
+      source: "argenmap",
+      layout: { visibility: "none" },
+    });
+
+    function switchBaseLayer(layer) {
+      map.setLayoutProperty(
+        "osm",
+        "visibility",
+        layer === "osm" ? "visible" : "none"
+      );
+      map.setLayoutProperty(
+        "argenmap",
+        "visibility",
+        layer === "argenmap" ? "visible" : "none"
+      );
+    }
+
+    document.querySelectorAll('input[name="basemap"]').forEach((radio) => {
+      radio.addEventListener("change", function () {
+        switchBaseLayer(this.value);
+      });
+    });
+  });
+
+  map.on("load", () => {
+    map.addSource("edificaciones", {
+      type: "vector",
+      tiles: [
+        "https://mapa.tandil.gov.ar/geoserver/gwc/service/tms/1.0.0/datos_publicos:comercios_hexa/{z}/{x}/{y}.pbf",
+      ],
+      scheme: "tms",
+    });
+
+    map.addLayer({
+      id: "edificaciones",
+      type: "fill-extrusion",
+      source: "edificaciones",
+      "source-layer": "comercios_hexa",
+      paint: {
+        "fill-extrusion-opacity": 0.7,
+        "fill-extrusion-color": [
+          "interpolate",
+          ["linear"],
+          ["get", "comercios"],
+          0,
+          "#f8d0b0",
+          3,
+          "#ee8449",
+          8,
+          "#e34e1c",
+          16,
+          "#912e1b",
+          32,
+          "#3f110b",
+        ],
+        "fill-extrusion-height": ["*", ["get", "comercios"], 10],
+        "fill-extrusion-base": 0,
+      },
+    });
+
+    map.on("mouseenter", "edificaciones", () => {
+      map.getCanvas().style.cursor = "pointer";
+    });
+
+    map.on("mouseleave", "edificaciones", () => {
+      map.getCanvas().style.cursor = "";
+    });
+  });
+
+  map.on("click", "edificaciones", (e) => {
+    const feature = e.features?.[0];
+    if (!feature) return;
+
+    const centroid = turf.centroid(feature);
+    const coordinates = centroid.geometry.coordinates as [number, number];
+
+    const properties = feature.properties;
+    const description = `
+      <span><p>Cantidad de comercios: </p><h2>${properties.comercios}</h2></span>
+    `;
+
+    new maplibregl.Popup({ closeOnClick: true, className: "popup-class" })
+      .setLngLat(coordinates)
+
+      .setHTML(description)
+      .addTo(map);
+  });
+
+  const geocoderApi = {
+    forwardGeocode: async (config) => {
+      const features = [];
+      try {
+        const request = `https://nominatim.openstreetmap.org/search?q=${
+          config.query
+        }+Tandil, Buenos Aires, Argentina&format=geojson&polygon_geojson=1&addressdetails=1`;
+        const response = await fetch(request);
+        const geojson = await response.json();
+        for (const feature of geojson.features) {
+          const center = [
+            feature.bbox[0] + (feature.bbox[2] - feature.bbox[0]) / 2,
+            feature.bbox[1] + (feature.bbox[3] - feature.bbox[1]) / 2,
+          ];
+          const point = {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: center,
+            },
+            place_name: feature.properties.display_name,
+            properties: feature.properties,
+            text: feature.properties.display_name,
+            place_type: ["place"],
+            center,
+          };
+          features.push(point);
+        }
+      } catch (e) {
+        console.error(`Failed to forwardGeocode with error: ${e}`);
+      }
+
+      return {
+        features,
+      };
+    },
+  };
+  map.addControl(
+    new MaplibreGeocoder(geocoderApi, {
+      maplibregl,
+    })
+  );
+  map.addControl(new maplibregl.NavigationControl());
+</script>
